@@ -3,7 +3,7 @@
 English build of Anti-Anti-Adblocker (AAAB) for desktop Chromium and Microsoft Edge.
 
 - Extension ID: `cdkcnbepbdllejmapkbffamoekdbhplj`
-- Version: `1.0.1`
+- Version: `1.0.2`
 - Update manifest: [updates.xml](https://raw.githubusercontent.com/9mc4p9n8kk-spec/aaab-updates/main/updates.xml)
 - Signed package: [aaab.crx](https://github.com/9mc4p9n8kk-spec/aaab-updates/raw/refs/heads/main/aaab.crx)
 
