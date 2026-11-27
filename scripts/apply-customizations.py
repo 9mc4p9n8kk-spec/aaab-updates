@@ -290,8 +290,8 @@ def worker_test(s):
   });"""
     return replace_once(s, old, new, "background test blocklist test")
 
-patch_test("shared/config.test.ts", config_test)
-patch_test("background/sw.test.ts", worker_test)
+patch_test("unit/shared/config.test.ts", config_test)
+patch_test("unit/background/sw.test.ts", worker_test)
 
 manifest_path = SRC / "manifest.json"
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
