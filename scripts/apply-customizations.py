@@ -148,17 +148,11 @@ def popup_ts(s):
 
 def options_ts(s):
     s = s.replace("disabled-sites", "allowed-sites")
-    s = s.replace("const disabledSites =", "const allowedSites =")
-    s = s.replace("if (disabledSites) disabledSites.value = cfg.disabledSites.join('\\n');",
-                  "if (allowedSites) allowedSites.value = cfg.allowedSites.join('\\n');")
-    s = s.replace("disabledSites: disabledSites\n", "allowedSites: allowedSites\n")
-    s = s.replace("disabledSites.value", "allowedSites.value")
-    s = s.replace("      disabledSites: disabledSites", "      allowedSites: allowedSites")
+    s = s.replace("disabledSites", "allowedSites")
+    s = s.replace("cfg.disabledSites", "cfg.allowedSites")
     s = s.replace("statusMsg.textContent = 'Đã lưu cấu hình!';", "statusMsg.textContent = 'Settings saved.';")
-    if "cfg.disabledSites" in s or "disabledSites" in s:
+    if "disabledSites" in s or "cfg.disabledSites" in s:
         raise SystemExit("Some disabledSites references remain in options.ts.")
-    if "allowedSites" not in s:
-        raise SystemExit("Could not patch options.ts.")
     return s
 
 def html_popup(s):
