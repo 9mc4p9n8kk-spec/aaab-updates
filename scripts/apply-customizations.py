@@ -229,8 +229,8 @@ def config_test(s):
       '*://www.example.com/*'
     ]);
     expect(hostToMatchPatterns('www.vnexpress.net')).toEqual([
-      '*://www.vnexpress.net/*',
-      '*://vnexpress.net/*'
+      '*://vnexpress.net/*',
+      '*://www.vnexpress.net/*'
     ]);
     expect(hostToMatchPatterns('')).toEqual([]);"""
     return replace_once(s, old, new, "config test host pattern expectations")
