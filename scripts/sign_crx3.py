@@ -31,7 +31,7 @@ def main():
     actual_id = ''.join(format(b, '02x') for b in crx_id)
     expected_id = ''.join(format(ord(c) - ord('a'), 'x') for c in EXTENSION_ID)
     if actual_id != expected_id:
-        raise SystemExit(f"Signing key mismatch: it produces extension ID {EXTENSION_ID if False else actual_id}, expected {EXTENSION_ID}. Refusing to publish an incompatible update.")
+        raise SystemExit(f"Signing key mismatch: key produces extension ID {actual_id}, expected {EXTENSION_ID}. Refusing to publish an incompatible update.")
 
     zip_path = output.with_suffix(".zip")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
