@@ -40,7 +40,7 @@ def main():
                 z.write(p, p.relative_to(source).as_posix())
     payload = zip_path.read_bytes()
     signed_header_data = field_bytes(1, crx_id)
-    signed_data = b"CRX3 SignedData\\0" + struct.pack("<I", len(signed_header_data)) + signed_header_data + payload
+    signed_data = b"CRX3 SignedData" + bytes([0]) + struct.pack("<I", len(signed_header_data)) + signed_header_data + payload
     signature = key.sign(signed_data, padding.PKCS1v15(), hashes.SHA256())
     rsa_proof = field_bytes(1, pub) + field_bytes(2, signature)
     header = field_bytes(1, rsa_proof) + field_bytes(2, signed_header_data)
