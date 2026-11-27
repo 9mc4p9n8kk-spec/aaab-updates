@@ -57,7 +57,7 @@ jobs:
           m = json.loads(p.read_text())
           m["version"] = "1.0.3." + os.environ["GITHUB_RUN_NUMBER"]
           m["update_url"] = "https://raw.githubusercontent.com/9mc4p9n8kk-spec/aaab-updates/main/updates.xml"
-          p.write_text(json.dumps(m, indent=2) + "\\n")
+          p.write_text(json.dumps(m, indent=2) + chr(10))
           PY
 
       - name: Install, test, typecheck and build
@@ -78,7 +78,7 @@ jobs:
             echo "::error::Add the original signing private key as repository secret AAAB_SIGNING_KEY. Do not generate a new key; it would change the extension ID."
             exit 1
           fi
-          printf '%s\\n' "$AAAB_SIGNING_KEY" > /tmp/aaab-signing-key.pem
+          printf '%s' "$AAAB_SIGNING_KEY" > /tmp/aaab-signing-key.pem; echo >> /tmp/aaab-signing-key.pem
           python3 -m pip install --quiet cryptography
           python3 scripts/sign_crx3.py upstream/dist /tmp/aaab-signing-key.pem aaab.crx
           rm -f /tmp/aaab-signing-key.pem
