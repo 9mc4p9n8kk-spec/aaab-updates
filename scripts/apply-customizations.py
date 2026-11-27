@@ -139,6 +139,7 @@ def worker(s):
 
 def popup_ts(s):
     s = replace_once(s, "toggle.checked = !res?.disabled;", "toggle.checked = !!res?.allowed;", "popup disabled-state read")
+    s = s.replace("    const disabled = !toggle.checked;\\n", "")
     old = "chrome.runtime.sendMessage({ type: 'setSiteDisabled', host, disabled }, () => {"
     new = "chrome.runtime.sendMessage({ type: 'setSiteAllowed', host, allowed: toggle.checked }, () => {"
     s = replace_once(s, old, new, "popup site-toggle message")
@@ -152,7 +153,7 @@ def options_ts(s):
                   "if (allowedSites) allowedSites.value = cfg.allowedSites.join('\\n');")
     s = s.replace("disabledSites: disabledSites\n", "allowedSites: allowedSites\n")
     s = s.replace("disabledSites.value", "allowedSites.value")
-    s = s.replace("      disabledSites:", "      allowedSites:")
+    s = s.replace("      disabledSites: disabledSites", "      allowedSites: allowedSites")
     s = s.replace("statusMsg.textContent = 'Đã lưu cấu hình!';", "statusMsg.textContent = 'Settings saved.';")
     if "cfg.disabledSites" in s or "disabledSites" in s:
         raise SystemExit("Some disabledSites references remain in options.ts.")
