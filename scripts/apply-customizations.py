@@ -139,7 +139,7 @@ def worker(s):
 
 def popup_ts(s):
     s = replace_once(s, "toggle.checked = !res?.disabled;", "toggle.checked = !!res?.allowed;", "popup disabled-state read")
-    s = s.replace("    const disabled = !toggle.checked;\\n", "")
+    s = s.replace("    const disabled = !toggle.checked;", "")
     old = "chrome.runtime.sendMessage({ type: 'setSiteDisabled', host, disabled }, () => {"
     new = "chrome.runtime.sendMessage({ type: 'setSiteAllowed', host, allowed: toggle.checked }, () => {"
     s = replace_once(s, old, new, "popup site-toggle message")
