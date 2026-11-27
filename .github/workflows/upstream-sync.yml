@@ -1,0 +1,103 @@
+name: Sync upstream and publish signed AAAB update
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-aaab-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-build-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out update repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch original author's latest source
+        run: |
+          git clone --depth 1 https://github.com/thanhds/anti-anti-adblocker.git upstream
+          echo "UPSTREAM_SHA=$(git -C upstream rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Skip if upstream has not changed
+        id: changed
+        shell: bash
+        run: |
+          previous="$(cat upstream-commit.txt 2>/dev/null || true)"
+          if [[ "$previous" == "$UPSTREAM_SHA" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream changes."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node
+        if: steps.changed.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: upstream/package-lock.json
+
+      - name: Apply English and strict allowlist customizations
+        if: steps.changed.outputs.changed == 'true'
+        run: |
+          python3 scripts/apply-customizations.py upstream
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("upstream/src/manifest.json")
+          m = json.loads(p.read_text())
+          m["version"] = "1.0.3." + os.environ["GITHUB_RUN_NUMBER"]
+          m["update_url"] = "https://raw.githubusercontent.com/9mc4p9n8kk-spec/aaab-updates/main/updates.xml"
+          p.write_text(json.dumps(m, indent=2) + "\\n")
+          PY
+
+      - name: Install, test, typecheck and build
+        if: steps.changed.outputs.changed == 'true'
+        working-directory: upstream
+        run: |
+          npm ci
+          npm test
+          npm run typecheck
+          npm run build
+
+      - name: Sign CRX using the existing extension identity
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          AAAB_SIGNING_KEY: ${{ secrets.AAAB_SIGNING_KEY }}
+        run: |
+          if [[ -z "$AAAB_SIGNING_KEY" ]]; then
+            echo "::error::Add the original signing private key as repository secret AAAB_SIGNING_KEY. Do not generate a new key; it would change the extension ID."
+            exit 1
+          fi
+          printf '%s\\n' "$AAAB_SIGNING_KEY" > /tmp/aaab-signing-key.pem
+          python3 -m pip install --quiet cryptography
+          python3 scripts/sign_crx3.py upstream/dist /tmp/aaab-signing-key.pem aaab.crx
+          rm -f /tmp/aaab-signing-key.pem
+
+      - name: Publish CRX and update manifest
+        if: steps.changed.outputs.changed == 'true'
+        run: |
+          version="1.0.3.${GITHUB_RUN_NUMBER}"
+          cat > updates.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+            <app appid="cdkcnbepbdllejmapkbffamoekdbhplj">
+              <updatecheck codebase="https://raw.githubusercontent.com/9mc4p9n8kk-spec/aaab-updates/main/aaab.crx" version="$version" />
+            </app>
+          </gupdate>
+          EOF
+          echo "$UPSTREAM_SHA" > upstream-commit.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add aaab.crx updates.xml upstream-commit.txt
+          git commit -m "Publish AAAB update $version from upstream $UPSTREAM_SHA"
+          git push
