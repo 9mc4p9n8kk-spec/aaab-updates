@@ -202,6 +202,97 @@ edit("options/options.ts", options_ts)
 edit("popup/popup.html", html_popup)
 edit("options/options.html", html_options)
 
+# Keep upstream unit tests aligned with the intentional allowlist behavior.
+def patch_test(path, transform):
+    p = ROOT / "test" / path
+    s = p.read_text(encoding="utf-8")
+    out = transform(s)
+    if out == s:
+        raise SystemExit(f"Test customization made no change to {path}; refusing unsafe patch.")
+    p.write_text(out, encoding="utf-8")
+
+def config_test(s):
+    s = s.replace("hostToExcludePatterns", "hostToMatchPatterns")
+    s = s.replace("disabledSites", "allowedSites")
+    s = s.replace("converts host to exclude patterns, stripping www if present",
+                  "matches exact host and its www counterpart only")
+    old = """    expect(hostToMatchPatterns('example.com')).toEqual([
+      '*://example.com/*',
+      '*://*.example.com/*'
+    ]);
+    expect(hostToMatchPatterns('www.vnexpress.net')).toEqual([
+      '*://vnexpress.net/*',
+      '*://*.vnexpress.net/*'
+    ]);"""
+    new = """    expect(hostToMatchPatterns('example.com')).toEqual([
+      '*://example.com/*',
+      '*://www.example.com/*'
+    ]);
+    expect(hostToMatchPatterns('www.vnexpress.net')).toEqual([
+      '*://www.vnexpress.net/*',
+      '*://vnexpress.net/*'
+    ]);
+    expect(hostToMatchPatterns('')).toEqual([]);"""
+    return replace_once(s, old, new, "config test host pattern expectations")
+
+def worker_test(s):
+    old = """  it('registers shield and cleaner content scripts with excludeMatches', async () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      disabledSites: ['example.com']
+    };
+
+    await syncContentScripts(config);
+
+    expect(unregisterMock).toHaveBeenCalled();
+    expect(registerMock).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'aaab-shield',
+          world: 'MAIN',
+          excludeMatches: ['*://example.com/*', '*://*.example.com/*']
+        }),
+        expect.objectContaining({
+          id: 'aaab-cleaner',
+          world: 'ISOLATED',
+          excludeMatches: ['*://example.com/*', '*://*.example.com/*']
+        })
+      ])
+    );
+  });"""
+    new = """  it('does not register content scripts when the allowlist is empty', async () => {
+    await syncContentScripts({ ...DEFAULT_CONFIG, allowedSites: [] });
+    expect(unregisterMock).toHaveBeenCalled();
+    expect(registerMock).not.toHaveBeenCalled();
+  });
+
+  it('registers shield and cleaner only for explicitly allowed exact hosts', async () => {
+    await syncContentScripts({
+      ...DEFAULT_CONFIG,
+      allowedSites: ['example.com']
+    });
+
+    expect(unregisterMock).toHaveBeenCalled();
+    expect(registerMock).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'aaab-shield',
+          world: 'MAIN',
+          matches: ['*://example.com/*', '*://www.example.com/*']
+        }),
+        expect.objectContaining({
+          id: 'aaab-cleaner',
+          world: 'ISOLATED',
+          matches: ['*://example.com/*', '*://www.example.com/*']
+        })
+      ])
+    );
+  });"""
+    return replace_once(s, old, new, "background test blocklist test")
+
+patch_test("shared/config.test.ts", config_test)
+patch_test("background/sw.test.ts", worker_test)
+
 manifest_path = SRC / "manifest.json"
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 manifest["default_locale"] = "en"
