@@ -43,7 +43,7 @@ def main():
     signed_data = b"CRX3 SignedData" + bytes([0]) + struct.pack("<I", len(signed_header_data)) + signed_header_data + payload
     signature = key.sign(signed_data, padding.PKCS1v15(), hashes.SHA256())
     rsa_proof = field_bytes(1, pub) + field_bytes(2, signature)
-    header = field_bytes(1, rsa_proof) + field_bytes(2, signed_header_data)
+    header = field_bytes(2, rsa_proof) + field_bytes(10000, signed_header_data)
     output.write_bytes(b"Cr24" + struct.pack("<I", 3) + struct.pack("<I", len(header)) + header + payload)
     print(f"Created {output} ({output.stat().st_size} bytes), extension ID {EXTENSION_ID}")
 
